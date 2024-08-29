@@ -91,3 +91,63 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+// Función que implementa la llamada al sistema getppid().
+// Devuelve el ID del proceso padre del proceso actual.
+uint64
+sys_getppid(void)
+{
+    // Obtiene el proceso actual usando myproc().
+    struct proc *p = myproc();
+    
+    // Verifica si el proceso tiene un padre.
+    if (p->parent)
+        // Si existe un padre, devuelve el ID del padre.
+        return p->parent->pid;
+    
+    // Si no existe un padre, devuelve -1 como código de error.
+    return -1;
+}
+
+// Función que implementa la llamada al sistema getancestor(int).
+// Devuelve el ID del ancestro especificado en el parámetro.
+uint64
+sys_getancestor(void)
+{
+    // Obtiene el proceso actual usando myproc().
+    struct proc *p = myproc();
+    
+    // Declara una variable para almacenar el argumento.
+    int n;
+    
+    // Obtiene el valor del argumento de la llamada al sistema.
+    // `argint(0, &n)` lee el primer argumento entero.
+    argint(0, &n);
+
+    // Verifica si el argumento es negativo.
+    if (n < 0)
+        // Si el argumento es negativo, devuelve -1 como código de error.
+        return -1;
+
+    // Imprime un mensaje de depuración que indica que se está obteniendo el ancestro
+    // para el proceso con el PID actual.
+    printf("Obteniendo ancestro %d para PID %d\n", n, p->pid);
+
+    // Recorre la jerarquía de procesos hasta el ancestro solicitado.
+    for (int i = 0; i < n; i++) {
+        // Verifica si el proceso tiene un padre.
+        if (p->parent) {
+            // Si existe un padre, actualiza el puntero al proceso padre.
+            p = p->parent;
+            // Imprime un mensaje de depuración con el PID del ancestro actual.
+            printf("Ancestro %d: PID %d\n", i, p->pid);
+        } else {
+            // Si no existe más ancestros, imprime un mensaje y devuelve -1.
+            printf("No hay más ancestros.\n");
+            return -1;
+        }
+    }
+    
+    // Devuelve el PID del ancestro encontrado.
+    return p->pid;
+}
