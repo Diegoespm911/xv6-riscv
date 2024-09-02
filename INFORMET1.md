@@ -164,6 +164,9 @@ Agregar en syscall.h:
 ```bash
 #define SYS_getppid 22       // Asigna un número de llamada al sistema
 #define SYS_getancestor 23   // Asigna un número de llamada al sistema
+
+[SYS_getppid] sys_getppid,
+[SYS_getancestor] sys_getancestor,
 ```
 
 Agregar en user.h:
