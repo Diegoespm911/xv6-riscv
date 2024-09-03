@@ -12,6 +12,8 @@ struct proc proc[NPROC];
 
 struct proc *initproc;
 
+// struct proc *get_older_process
+
 int nextpid = 1;
 struct spinlock pid_lock;
 
@@ -48,7 +50,13 @@ void
 procinit(void)
 {
   struct proc *p;
-  
+
+/*
+  acquire(&tickslock);
+  p->arrival_time = ticks;
+  release(&tickslock);
+*/
+
   initlock(&pid_lock, "nextpid");
   initlock(&wait_lock, "wait_lock");
   for(p = proc; p < &proc[NPROC]; p++) {
@@ -479,6 +487,24 @@ scheduler(void)
     }
   }
 }
+
+/*
+void
+scheduler(void)
+{
+  struct cpu *c = mycpu();
+  c->proc = 0;
+  struct proc *oldest; // Declarar fuera del bucle
+
+  for (;;) {
+    intr_on();
+
+    oldest = get_older_process(); //obtener el proceso mas antiguo
+    
+  }
+
+}
+*/
 
 // Switch to scheduler.  Must hold only p->lock
 // and have changed proc->state. Saves and restores

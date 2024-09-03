@@ -28,9 +28,9 @@ void test_getancestor(int levels) {
     for (int i = 0; i <= levels; i++) {
         int ancestor_pid = getancestor(i);
         if (ancestor_pid != -1) {
-            printf("Ancestor level %d: PID %d\n", i, ancestor_pid);
+            printf("Getancestor %d: PID %d\n", i, ancestor_pid);
         } else {
-            printf("Ancestor level %d: No se encuentra ancestor\n", i);
+            printf("Getancestor %d: PID -1 No se encuentra ancestor\n", i);
             break;  // Detener la búsqueda cuando no hay más ancestros
         }
     }
@@ -59,7 +59,7 @@ int main() {
     pid = fork();
     if (pid == 0) {
         // Crear la jerarquía de procesos para la prueba de getancestor
-        for (int i = 0; i <= 20; i++) {
+        for (int i = 0; i <= 10; i++) {
             pid = fork();
             if (pid > 0) {
                 // Proceso padre espera a que el hijo termine

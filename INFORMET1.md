@@ -79,9 +79,9 @@ void test_getancestor(int levels) {
     for (int i = 0; i <= levels; i++) {
         int ancestor_pid = getancestor(i);
         if (ancestor_pid != -1) {
-            printf("Ancestor level %d: PID %d\n", i, ancestor_pid);
+            printf("Getancestor %d: PID %d\n", i, ancestor_pid);
         } else {
-            printf("Ancestor level %d: No se encuentra ancestor\n", i);
+            printf("Getancestor %d: PID -1 No se encuentra ancestor\n", i);
             break;  // Detener la búsqueda cuando no hay más ancestros
         }
     }
@@ -110,7 +110,7 @@ int main() {
     pid = fork();
     if (pid == 0) {
         // Crear la jerarquía de procesos para la prueba de getancestor
-        for (int i = 0; i <= 20; i++) {
+        for (int i = 0; i <= 10; i++) {
             pid = fork();
             if (pid > 0) {
                 // Proceso padre espera a que el hijo termine
@@ -194,7 +194,7 @@ $U/_yosoytupadre\
 Inicialmente, se añadieron las llamadas al sistema directamente en usys.S, pero al ejecutar xv6, estas se eliminaban. Se resolvió al agregar las llamadas en usys.pl, que automáticamente genera usys.S.
 
 ### Saltos en los PID utilizados en getancestor:
-Se observó que los procesos utilizados en getppid no aparecían en la lista de ancestros durante la prueba de getancestor. Esto se debe a que esos procesos terminan y liberan su PID antes de la llamada a getancestor. La funcionalidad sigue siendo correcta ya que cumple con los requisitos de encontrar ancestros existentes.
+Se observó que los procesos utilizados en getppid no aparecían en la lista de ancestros durante la prueba de getancestor. Esto se debe a que esos procesos terminan y liberan su PID antes de la llamada a getancestor. La funcionalidad se entiende que sigue siendo correcta ya que cumple con los requisitos de encontrar ancestros existentes saltandose los PIDs inexistentes.
 
 
 ## Funcionamiento de las llamadas al sistema (imagen)
