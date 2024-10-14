@@ -133,6 +133,10 @@ found:
   p->pid = allocpid();
   p->state = USED;
 
+  // Inicializar prioridad y boost
+  p->priority = 0;  // Inicializa la prioridad en 0
+  p->boost = 1;     // Inicializa el boost en 1
+
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
     freeproc(p);
@@ -456,32 +460,51 @@ scheduler(void)
   struct cpu *c = mycpu();
 
   c->proc = 0;
-  for(;;){
-    // The most recent process to run may have had interrupts
-    // turned off; enable them to avoid a deadlock if all
-    // processes are waiting.
+  for(;;) {
+    // Habilitar interrupciones para evitar deadlocks
     intr_on();
 
     int found = 0;
     for(p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
+      
+      // Solo considerar procesos RUNNABLE
       if(p->state == RUNNABLE) {
-        // Switch to chosen process.  It is the process's job
-        // to release its lock and then reacquire it
-        // before jumping back to us.
+        // Si el boost es positivo, se incrementa la prioridad
+        p->priority += p->boost;
+
+        // Si la prioridad llega a 9, cambiar boost a -1
+        if(p->priority >= 9) {
+          p->priority = 9;
+          p->boost = -1;  // Cambiar boost a -1
+        }
+
+        // Si la prioridad llega a 0, cambiar boost a 1
+        if(p->priority <= 0) {
+          p->priority = 0;
+          p->boost = 1;   // Cambiar boost a 1
+        }
+
+        // Imprimir prioridad y boost
+        // printf("Ejecutando proceso con PID %d: Prioridad = %d, Boost = %d\n", p->pid, p->priority, p->boost);
+
+        // Cambiar el estado del proceso a RUNNING
         p->state = RUNNING;
         c->proc = p;
+
+        // Ejecutar el proceso
         swtch(&c->context, &p->context);
 
-        // Process is done running for now.
-        // It should have changed its p->state before coming back.
+        // Proceso deja de ejecutarse
         c->proc = 0;
         found = 1;
       }
+
       release(&p->lock);
     }
+
     if(found == 0) {
-      // nothing to run; stop running on this core until an interrupt.
+      // No hay procesos RUNNABLE; espera una interrupción
       intr_on();
       asm volatile("wfi");
     }
