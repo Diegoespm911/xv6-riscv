@@ -5,6 +5,7 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "syscall.h"
 
 uint64
 sys_exit(void)
@@ -139,4 +140,26 @@ sys_getancestor(void)
 
     // Imprimir el PID del ancestro encontrado y devolverlo
     return p->pid; // Devolver el PID del ancestro encontrado
+}
+
+// Declaraciones de las funciones
+int mprotect(void *addr, int len);
+int munprotect(void *addr, int len);
+
+uint64
+sys_mprotect(void) {
+    void *addr;
+    int len;
+    argaddr(0, (uint64 *)&addr);  // Usa directamente argaddr sin chequeo de retorno
+    argint(1, &len);              // Usa directamente argint sin chequeo de retorno
+    return mprotect(addr, len);
+}
+
+uint64
+sys_munprotect(void) {
+    void *addr;
+    int len;
+    argaddr(0, (uint64 *)&addr);
+    argint(1, &len);
+    return munprotect(addr, len);
 }

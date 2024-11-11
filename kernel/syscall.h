@@ -22,3 +22,5 @@
 #define SYS_close  21
 #define SYS_getppid 22  // Se agrega uno nuevo
 #define SYS_getancestor 23  // Se agrega el otro
+#define SYS_mprotect 24 // Nuevo
+#define SYS_munprotect 25 //Nuevo

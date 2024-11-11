@@ -37,22 +37,24 @@ void
 usertrap(void)
 {
   int which_dev = 0;
+  uint64 scause = r_scause();  // Captura el valor de scause
+  uint64 sepc = r_sepc();      // Captura el valor de sepc
+  uint64 stval = r_stval();    // Captura el valor de stval (dirección de la violación)
 
   if((r_sstatus() & SSTATUS_SPP) != 0)
     panic("usertrap: not from user mode");
 
-  // send interrupts and exceptions to kerneltrap(),
-  // since we're now in the kernel.
+  // Send interrupts and exceptions to kerneltrap(), since we're now in the kernel.
   w_stvec((uint64)kernelvec);
 
   struct proc *p = myproc();
   
-  // save user program counter.
+  // Save the user program counter.
   p->trapframe->epc = r_sepc();
-  
-  if(r_scause() == 8){
-    // system call
 
+  // Manejo de las excepciones
+  if(scause == 8) {
+    // system call
     if(killed(p))
       exit(-1);
 
@@ -60,28 +62,47 @@ usertrap(void)
     // but we want to return to the next instruction.
     p->trapframe->epc += 4;
 
-    // an interrupt will change sepc, scause, and sstatus,
-    // so enable only now that we're done with those registers.
+    // Enable interrupts after handling the trap
     intr_on();
-
     syscall();
-  } else if((which_dev = devintr()) != 0){
-    // ok
+  } else if(scause == 0xf) {
+    // Violación de acceso a memoria (scause == 0xf)
+    // Aquí capturamos el error de acceso a memoria
+    printf("usertrap: Violación de acceso a memoria (se comprueba)\n");
+    printf("scause=0x%lx sepc=0x%lx stval=0x%lx\n", scause, sepc, stval);
+
+    // Verificar si la violación ocurrió en una dirección protegida
+    if (stval == (uint64)argaddr) {
+        // Esto indica que la violación ocurrió en una dirección que intentamos proteger con mprotect
+        printf("Violación de acceso en una dirección protegida\n");
+        // Restaurar la ejecución, permitiendo al proceso continuar si lo deseamos
+        p->trapframe->epc = sepc;  // Restaurar el valor de `sepc` para continuar la ejecución
+    } else {
+        // Si la violación no es esperada, terminamos el proceso
+        setkilled(p);
+    }
+  } else if((which_dev = devintr()) != 0) {
+    // Interrupción de un dispositivo manejada correctamente
   } else {
-    printf("usertrap(): unexpected scause 0x%lx pid=%d\n", r_scause(), p->pid);
-    printf("            sepc=0x%lx stval=0x%lx\n", r_sepc(), r_stval());
+    // Ocurrió una excepción no esperada
+    printf("usertrap(): unexpected scause 0x%lx pid=%d\n", scause, p->pid);
+    printf("            sepc=0x%lx stval=0x%lx\n", sepc, stval);
     setkilled(p);
   }
 
-  if(killed(p))
+  // Si el proceso fue marcado como matado, lo terminamos
+  if(killed(p)) {
     exit(-1);
+  }
 
-  // give up the CPU if this is a timer interrupt.
+  // Give up the CPU if this is a timer interrupt.
   if(which_dev == 2)
     yield();
 
   usertrapret();
 }
+
+
 
 //
 // return to user space

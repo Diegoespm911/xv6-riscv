@@ -5,6 +5,9 @@
 #include "riscv.h"
 #include "defs.h"
 #include "fs.h"
+#include "proc.h"
+#include <stdint.h>
+#include "spinlock.h"
 
 /*
  * the kernel's page table.
@@ -449,3 +452,78 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
     return -1;
   }
 }
+
+int mprotect(void *addr, int len);
+int munprotect(void *addr, int len);
+
+// Función mprotect: Marca una región de memoria como solo lectura.
+int mprotect(void *addr, int len) {
+    if (len <= 0 || addr == 0 || ((uintptr_t)addr % PGSIZE) != 0) {
+        return -1; // Dirección inválida o longitud negativa
+    }
+
+    uintptr_t start = (uintptr_t)addr;
+    uintptr_t end = start + len * PGSIZE;
+
+    // Recorre las páginas involucradas
+    for (uintptr_t va = start; va < end; va += PGSIZE) {
+        pte_t *pte = walk(myproc()->pagetable, va, 0);
+
+        if (pte == 0) {
+            return -1; // No se encontró una entrada de página para esta dirección
+        }
+
+        // Imprimir el valor de PTE antes de la modificación
+        // printf("mprotect: pte antes de modificación: %p\n", pte);
+        // printf("PTE antes de modificación: %lx\n", *pte); // Mostrar el valor de pte antes de modificarlo
+        // printf("PTE_R: %lx, PTE_W: %lx\n", (*pte & PTE_R), (*pte & PTE_W)); // Mostrar bits PTE_R y PTE_W
+
+        // Deshabilitar el permiso de escritura (PTE_W)
+        *pte &= ~PTE_W;  // Poner a 0 el bit W
+        *pte |= PTE_R;   // Asegurarse de que el bit R esté habilitado
+        
+        // Imprimir el valor después de la modificación
+        // printf("mprotect: pte después de modificación: %p\n", pte);
+        // printf("PTE después de modificación: %lx\n", *pte);  // Mostrar el valor de pte después de modificarlo
+        // printf("PTE_R: %lx, PTE_W: %lx\n", (*pte & PTE_R), (*pte & PTE_W)); // Mostrar bits PTE_R y PTE_W después de la modificación
+    }
+
+    return 0; // Éxito
+}
+
+
+
+// Función munprotect: Restaura el permiso de escritura en una región de memoria.
+int munprotect(void *addr, int len) {
+    if (len <= 0 || addr == 0 || ((uintptr_t)addr % PGSIZE) != 0) {
+        return -1; // Dirección inválida o longitud negativa
+    }
+
+    uintptr_t start = (uintptr_t)addr;
+    uintptr_t end = start + len * PGSIZE;
+
+    // Recorre las páginas involucradas
+    for (uintptr_t va = start; va < end; va += PGSIZE) {
+        pte_t *pte = walk(myproc()->pagetable, va, 0);
+
+        if (pte == 0) {
+            return -1; // No se encontró una entrada de página para esta dirección
+        }
+
+        // Imprimir el valor de PTE antes de la modificación
+        // printf("munprotect: pte antes de modificación: %p\n", pte);
+        // printf("PTE antes de modificación: %lx\n", *pte); // Mostrar el valor de pte antes de modificarlo
+        // printf("PTE_R: %lx, PTE_W: %lx\n", (*pte & PTE_R), (*pte & PTE_W)); // Mostrar bits PTE_R y PTE_W
+
+        // Restaurar el permiso de escritura (habilitar PTE_W)
+        *pte |= PTE_W;  // Poner a 1 el bit W para habilitar escritura
+        
+        // Imprimir el valor después de la modificación
+        // printf("munprotect: pte después de modificación: %p\n", pte);
+        // printf("PTE después de modificación: %lx\n", *pte);  // Mostrar el valor de pte después de modificarlo
+        // printf("PTE_R: %lx, PTE_W: %lx\n", (*pte & PTE_R), (*pte & PTE_W)); // Mostrar bits PTE_R y PTE_W después de la modificación
+    }
+
+    return 0; // Éxito
+}
+
