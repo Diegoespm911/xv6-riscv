@@ -3,7 +3,7 @@
 
 
 #define ROOTINO  1   // root i-number
-#define BSIZE 1024  // block size
+#define BSIZE 1024    // block size
 
 // Disk layout:
 // [ boot block | super block | log | inode blocks |
@@ -36,6 +36,7 @@ struct dinode {
   short nlink;          // Number of links to inode in file system
   uint size;            // Size of file (bytes)
   uint addrs[NDIRECT+1];   // Data block addresses
+  int permissions;      // Permisos: 0 (ninguno), 1 (lectura), 2 (escritura), 3 (lectura/escritura)
 };
 
 // Inodes per block.
@@ -57,4 +58,3 @@ struct dirent {
   ushort inum;
   char name[DIRSIZ];
 };
-

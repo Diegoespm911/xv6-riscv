@@ -142,7 +142,8 @@ UPROGS=\
 	$U/_zombie\
 	$U/_yosoytupadre\
 	$U/_testpriority\
-    $U/_test
+    $U/_test\
+	$U/_testchmod
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)

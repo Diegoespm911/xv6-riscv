@@ -20,13 +20,14 @@ struct inode {
   int ref;            // Reference count
   struct sleeplock lock; // protects everything below here
   int valid;          // inode has been read from disk?
-
   short type;         // copy of disk inode
   short major;
   short minor;
   short nlink;
   uint size;
   uint addrs[NDIRECT+1];
+  
+  int permissions;     // Permisos: 0 (ninguno), 1 (lectura), 2 (escritura), 3 (lectura/escritura)
 };
 
 // map major device number to device functions.

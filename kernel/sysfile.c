@@ -302,75 +302,6 @@ create(char *path, short type, short major, short minor)
 }
 
 uint64
-sys_open(void)
-{
-  char path[MAXPATH];
-  int fd, omode;
-  struct file *f;
-  struct inode *ip;
-  int n;
-
-  argint(1, &omode);
-  if((n = argstr(0, path, MAXPATH)) < 0)
-    return -1;
-
-  begin_op();
-
-  if(omode & O_CREATE){
-    ip = create(path, T_FILE, 0, 0);
-    if(ip == 0){
-      end_op();
-      return -1;
-    }
-  } else {
-    if((ip = namei(path)) == 0){
-      end_op();
-      return -1;
-    }
-    ilock(ip);
-    if(ip->type == T_DIR && omode != O_RDONLY){
-      iunlockput(ip);
-      end_op();
-      return -1;
-    }
-  }
-
-  if(ip->type == T_DEVICE && (ip->major < 0 || ip->major >= NDEV)){
-    iunlockput(ip);
-    end_op();
-    return -1;
-  }
-
-  if((f = filealloc()) == 0 || (fd = fdalloc(f)) < 0){
-    if(f)
-      fileclose(f);
-    iunlockput(ip);
-    end_op();
-    return -1;
-  }
-
-  if(ip->type == T_DEVICE){
-    f->type = FD_DEVICE;
-    f->major = ip->major;
-  } else {
-    f->type = FD_INODE;
-    f->off = 0;
-  }
-  f->ip = ip;
-  f->readable = !(omode & O_WRONLY);
-  f->writable = (omode & O_WRONLY) || (omode & O_RDWR);
-
-  if((omode & O_TRUNC) && ip->type == T_FILE){
-    itrunc(ip);
-  }
-
-  iunlock(ip);
-  end_op();
-
-  return fd;
-}
-
-uint64
 sys_mkdir(void)
 {
   char path[MAXPATH];
@@ -501,5 +432,141 @@ sys_pipe(void)
     fileclose(wf);
     return -1;
   }
+  return 0;
+}
+
+uint64 sys_open(void) {
+  char path[MAXPATH];
+  int fd, omode;
+  struct file *f;
+  struct inode *ip;
+  int n;
+
+  // Obtener parámetros: modo de apertura y ruta del archivo
+  argint(1, &omode);
+  if ((n = argstr(0, path, MAXPATH)) < 0)
+    return -1;
+
+  begin_op();
+
+  // Si se pide crear el archivo
+  if (omode & O_CREATE) {
+    ip = create(path, T_FILE, 0, 0);
+    if (ip == 0) {
+      end_op();
+      return -1;
+    }
+  } else {
+    // Buscar el archivo por su ruta
+    if ((ip = namei(path)) == 0) {
+      end_op();
+      return -1;
+    }
+    ilock(ip);
+
+    // Si el archivo es un directorio y no se pide solo lectura, error
+    if (ip->type == T_DIR && omode != O_RDONLY) {
+      iunlockput(ip);
+      end_op();
+      return -1;
+    }
+
+    // Verificar permisos de apertura (lectura/escritura)
+    if (ip->permissions == 5) {  // Si el archivo es inmutable
+      if (omode != O_RDONLY) {  // No se puede escribir
+        iunlockput(ip);
+        end_op();
+        return -1;
+      }
+    } else {
+      // Verificar permisos de lectura/escritura
+      if ((omode & O_WRONLY) && !(ip->permissions & 2)) {  // Verificar permiso de escritura
+        iunlockput(ip);
+        end_op();
+        return -1;
+      }
+
+      if ((omode & O_RDONLY) && !(ip->permissions & 1)) {  // Verificar permiso de lectura
+        iunlockput(ip);
+        end_op();
+        return -1;
+      }
+    }
+  }
+
+  // Verificación de dispositivos
+  if (ip->type == T_DEVICE && (ip->major < 0 || ip->major >= NDEV)) {
+    iunlockput(ip);
+    end_op();
+    return -1;
+  }
+
+  // Asignar descriptor de archivo
+  if ((f = filealloc()) == 0 || (fd = fdalloc(f)) < 0) {
+    if (f)
+      fileclose(f);
+    iunlockput(ip);
+    end_op();
+    return -1;
+  }
+
+  // Configurar el archivo en el descriptor
+  if (ip->type == T_DEVICE) {
+    f->type = FD_DEVICE;
+    f->major = ip->major;
+  } else {
+    f->type = FD_INODE;
+    f->off = 0;
+  }
+  f->ip = ip;
+  f->readable = !(omode & O_WRONLY);
+  f->writable = (omode & O_WRONLY) || (omode & O_RDWR);
+
+  // Si se solicita truncar el archivo, hacerlo
+  if ((omode & O_TRUNC) && ip->type == T_FILE) {
+    itrunc(ip);
+  }
+
+  iunlock(ip);
+  end_op();
+
+  return fd;
+}
+
+
+uint64 sys_chmod(void) {
+  char path[MAXPATH];
+  int mode;
+  struct inode *ip;
+
+  // Obtener parámetros: ruta del archivo y el modo de permiso
+  argint(1, &mode);
+  if (argstr(0, path, MAXPATH) < 0 || mode < 0)
+    return -1;
+
+  begin_op();
+
+  // Buscar el archivo por su ruta
+  if ((ip = namei(path)) == 0) {
+    end_op();
+    printf("Archivo no encontrado.\n");
+    return -1;
+  }
+
+  ilock(ip);
+
+  // Si el archivo es inmutable, no se puede cambiar su permiso
+  if (ip->permissions == 5) {
+    iunlockput(ip);
+    end_op();
+    return -1;
+  }
+
+  // Cambiar los permisos del archivo
+  ip->permissions = mode;
+  iupdate(ip);
+  iunlockput(ip);
+  end_op();
+
   return 0;
 }

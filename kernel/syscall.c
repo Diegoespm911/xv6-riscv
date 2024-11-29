@@ -101,10 +101,11 @@ extern uint64 sys_unlink(void);
 extern uint64 sys_link(void);
 extern uint64 sys_mkdir(void);
 extern uint64 sys_close(void);
-extern uint64 sys_getppid(void); //agregado
-extern uint64 sys_getancestor(void); //agregado
-extern uint64 sys_mprotect(void); //Nuevo agregado
-extern uint64 sys_munprotect(void); //Nuevo agregado
+extern uint64 sys_getppid(void); 
+extern uint64 sys_getancestor(void); 
+extern uint64 sys_mprotect(void); 
+extern uint64 sys_munprotect(void); 
+extern uint64 sys_chmod(void); //Nuevo agregado
 
 
 // An array mapping syscall numbers from syscall.h
@@ -133,8 +134,9 @@ static uint64 (*syscalls[])(void) = {
 [SYS_close]   sys_close,
 [SYS_getppid] sys_getppid,
 [SYS_getancestor] sys_getancestor,
-[SYS_mprotect] sys_mprotect, //Nuevo
-[SYS_munprotect] sys_munprotect, //Nuevo
+[SYS_mprotect] sys_mprotect, 
+[SYS_munprotect] sys_munprotect, 
+[SYS_chmod] sys_chmod, //Nuevo
 };
 
 void
